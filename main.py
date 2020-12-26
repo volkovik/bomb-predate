@@ -1,6 +1,5 @@
 import pygame as pg
 
-
 SIZE = WIDTH, HEIGHT = 700, 500  # Размеры окна
 
 # Инициализация окна pygame
@@ -10,17 +9,21 @@ screen = pg.display.set_mode(SIZE)
 
 # События
 START_GAME = pg.USEREVENT + 1
+CONTINUE_GAME = pg.USEREVENT + 2
+PAUSE = pg.USEREVENT + 3
 
 # Спрайты
-all_sprites = pg.sprite.Group()
-start_menu = pg.sprite.Group()  # Спрайты главного меню игры
+game_sprites = pg.sprite.Group()  # Спрайты игры
+start_menu_sprites = pg.sprite.Group()  # Спрайты главного меню
+pause_menu_sprites = pg.sprite.Group()  # Спрайты меню паузы
 
 
 class Button(pg.sprite.Sprite):
     clicked = False
     hovered = False
 
-    def __init__(self, name, event, point, width=185, height=35, button_color=(38, 222, 255), text_color=(255, 255, 255)):
+    def __init__(self, name, event, point, width=185, height=35,
+                 button_color=(38, 222, 255), text_color=(255, 255, 255), groups=tuple()):
         """
         Спрайт кнопки
 
@@ -32,7 +35,7 @@ class Button(pg.sprite.Sprite):
         :param button_color: цвет кнопки
         :param text_color: цвет текста
         """
-        super(Button, self).__init__()
+        super(Button, self).__init__(*groups)
         self.image = pg.Surface((width, height), pg.SRCALPHA, 32)
         self.rect = pg.Rect(*point, width, height)
 
@@ -109,24 +112,62 @@ class Button(pg.sprite.Sprite):
                 self.draw(self.button_color, self.text_color)
 
 
+def make_menu(button_names, sprite_group):
+    but_w, but_h = 185, 35
+
+    start_x, start_y = WIDTH // 2 - but_w // 2, HEIGHT // 2 - but_h // 2 - (len(button_names) - 1) * 15
+
+    for num, but in enumerate(button_names.items()):
+        name, event = but
+        Button(name, event, (start_x, start_y + (but_h + 15) * num), groups=(sprite_group,))
+
+
 def main():
     running = True
 
-    button = Button("Начать игру", START_GAME, (50, 50))
-    start_menu.add(button)
+    make_menu(
+        {
+            "Начать игру": START_GAME,
+            "Выйти из игры": pg.QUIT
+        }, start_menu_sprites
+    )
+    make_menu(
+        {
+            "Продолжить игру": CONTINUE_GAME,
+            "Начать заново": START_GAME,
+            "Выйти из игры": pg.QUIT
+        }, pause_menu_sprites
+    )
+
+    current_sprites = start_menu_sprites
 
     # Основной цикл игры
     while running:
         for event in pg.event.get():
-            start_menu.update(event)
+            current_sprites.update(event)
 
             if event.type == pg.QUIT:
                 running = False
+            # Если игрок начинает игру заново или впервые начал её
             if event.type == START_GAME:
-                print("Game has been started")
+                current_sprites = game_sprites
+            # Если игрок был в меню паузы и решил продолжить игру
+            if event.type == CONTINUE_GAME:
+                current_sprites = game_sprites
+            # Если игрок нажал на кнопку
+            if event.type == pg.KEYDOWN:
+                key = event.key
+
+                if key == pg.K_ESCAPE:
+                    # Если игрок был в игре, то при нажатии ESC откроется меню паузы
+                    if current_sprites == game_sprites:
+                        current_sprites = pause_menu_sprites
+                    # Если игрок был в меню паузы, то при нажатии ESC он вернётся в игру
+                    elif current_sprites == pause_menu_sprites:
+                        current_sprites = game_sprites
 
         screen.fill((0, 0, 0))
-        start_menu.draw(screen)
+        current_sprites.draw(screen)
         pg.display.flip()
 
     pg.quit()
