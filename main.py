@@ -8,6 +8,9 @@ pg.init()
 pg.display.set_caption("BombPredate")
 screen = pg.display.set_mode(SIZE)
 
+# События
+START_GAME = pg.USEREVENT + 1
+
 # Спрайты
 all_sprites = pg.sprite.Group()
 start_menu = pg.sprite.Group()  # Спрайты главного меню игры
@@ -17,11 +20,12 @@ class Button(pg.sprite.Sprite):
     clicked = False
     hovered = False
 
-    def __init__(self, name, point, width=185, height=35, button_color=(38, 222, 255), text_color=(255, 255, 255)):
+    def __init__(self, name, event, point, width=185, height=35, button_color=(38, 222, 255), text_color=(255, 255, 255)):
         """
         Спрайт кнопки
 
         :param name: название на кнопке
+        :param event: тип события, которое будет вызвано при нажатии кнопки
         :param point: (x, y) - точка, где будет располагаться левый верхний угол кнопки
         :param width: длинна кнопки
         :param height: ширина кнопки
@@ -33,6 +37,7 @@ class Button(pg.sprite.Sprite):
         self.rect = pg.Rect(*point, width, height)
 
         self.name = name
+        self.event = event
         self.x, self.y = point
         self.w, self.h = width, height
         self.button_color = button_color
@@ -43,6 +48,12 @@ class Button(pg.sprite.Sprite):
         self.draw(button_color, text_color)
 
     def draw(self, button_color, text_color):
+        """
+        Рисует кнопку
+
+        :param button_color: цвет кнопки
+        :param text_color: цвет текста
+        """
         # Рисуем фон кнопки
         pg.draw.rect(self.image, button_color, (0, 0, self.w, self.h), border_radius=7)
         pg.draw.rect(
@@ -73,7 +84,7 @@ class Button(pg.sprite.Sprite):
                 # Если в этот момент кнопка до этого была нажата и курсор до сих пор находится на кнопке, то происходят
                 # заданные инструкции при создании кнопки
                 if self.clicked:
-                    print(f"\"{self.name}\" button was clicked")
+                    pg.event.post(pg.event.Event(self.event))
 
                 self.clicked = False
 
@@ -101,7 +112,7 @@ class Button(pg.sprite.Sprite):
 def main():
     running = True
 
-    button = Button("Начать игру", (50, 50))
+    button = Button("Начать игру", START_GAME, (50, 50))
     start_menu.add(button)
 
     # Основной цикл игры
@@ -111,6 +122,8 @@ def main():
 
             if event.type == pg.QUIT:
                 running = False
+            if event.type == START_GAME:
+                print("Game has been started")
 
         screen.fill((0, 0, 0))
         start_menu.draw(screen)
