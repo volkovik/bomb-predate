@@ -197,6 +197,7 @@ def main():
             "Выйти из игры": pygame.QUIT
         }, pause_menu_sprites
     )
+    background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
 
     current_sprites = start_menu_sprites
 
@@ -225,7 +226,7 @@ def main():
                     elif current_sprites == pause_menu_sprites:
                         current_sprites = game_sprites
 
-        screen.fill((0, 0, 0))
+        screen.blit(background, (0, 0))
         current_sprites.draw(screen)
         current_sprites.update()
         clock.tick(FPS)
