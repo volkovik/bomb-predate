@@ -21,7 +21,7 @@ PAUSE = pygame.USEREVENT + 3
 # Спрайты
 game_sprites = pygame.sprite.Group()  # Спрайты игры
 start_menu_sprites = pygame.sprite.Group()  # Спрайты главного меню
-cloud_sprites = pygame.sprite.Group()
+cloud_sprites = pygame.sprite.Group()  # Спрайты облаков
 pause_menu_sprites = pygame.sprite.Group()  # Спрайты меню паузы
 
 
@@ -142,29 +142,54 @@ class Button(pygame.sprite.Sprite):
 
 
 class Cloud(pygame.sprite.Sprite):
+    duplicate = False
     images = [load_image(f"cloud{i}.png") for i in range(1, 5)]
     transition_w = max(images, key=lambda i: i.get_rect().w).get_rect().w
 
-    def __init__(self, group):
-        super(Cloud, self).__init__(group)
-        self.image = random.choice(Cloud.images)
-        self.rect = self.image.get_rect()
+    def __init__(self, group, x=None, y=None, cloud_index=None):
+        """
+        Спрайт облака, украшение
 
-        self.rect.x = self.x = random.randrange(WIDTH - self.rect.w)
-        self.rect.y = random.randrange(HEIGHT - self.rect.h)
+        :param group: группа спрайтов
+        """
+        super(Cloud, self).__init__(group)
+        if cloud_index:
+            self.image = Cloud.images[cloud_index]
+            self.cloud_index = cloud_index
+        else:
+            self.image = random.choice(Cloud.images)
+            self.cloud_index = Cloud.images.index(self.image)
+
+        self.rect = self.image.get_rect()
+        if not x or not y:
+            self.rect.x = self.x = random.randrange(WIDTH - self.rect.w)
+            self.rect.y = random.randrange(HEIGHT - self.rect.h)
+        else:
+            self.rect.x = self.x = x
+            self.rect.y = y
 
         self.vel = 60 / FPS
 
     def update(self, event=None):
         if not event:
-            self.x -= self.vel
-            self.rect.topleft = round(self.x), self.rect.y
+            self.x -= self.vel  # из-за того, что rect может хранить только целые числа, то реальную координату x
+            # облака мы храним в отдельном параметре
+            self.rect.x = self.x
 
-            if self.rect.x == -self.transition_w:
-                self.x = self.rect.x = WIDTH
+            if self.rect.x < 0 and not self.duplicate:
+                self.duplicate = True
+                Cloud(self.groups()[0], WIDTH - 1, self.rect.y, self.cloud_index)
+            if self.rect.x == -self.rect.w:
+                self.kill()
 
 
 def make_menu(button_names, sprite_group):
+    """
+    Создаёт кнопки в середине экрана
+
+    :param button_names: словарь с названием кнопки и событием, которое будет воспроизводиться при нажатии
+    :param sprite_group: группа спрайтов, в котором будут созданы кнопки
+    """
     but_w, but_h = 185, 35
 
     start_x, start_y = WIDTH // 2 - but_w // 2, HEIGHT // 2 - but_h // 2 - (len(button_names) - 1) * 15
@@ -174,9 +199,13 @@ def make_menu(button_names, sprite_group):
         Button(name, event, (start_x, start_y + (but_h + 15) * num), groups=(sprite_group,))
 
 
+def make_clouds():
+    for i in range(10):
+        Cloud(cloud_sprites)
+
+
 def make_start_menu():
-    for i in range(5):
-        Cloud(start_menu_sprites)
+    """Создаёт стартовое меню"""
     make_menu(
         {
             "Начать игру": START_GAME,
@@ -189,7 +218,15 @@ def main():
     running = True
     clock = pygame.time.Clock()
 
+    background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
+
+    # Создаём облака под фон
+    for i in range(10):
+        Cloud(cloud_sprites)
+
     make_start_menu()
+
+    # Создаём интерфейс меню паузы
     make_menu(
         {
             "Продолжить игру": CONTINUE_GAME,
@@ -197,7 +234,6 @@ def main():
             "Выйти из игры": pygame.QUIT
         }, pause_menu_sprites
     )
-    background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
 
     current_sprites = start_menu_sprites
 
@@ -226,9 +262,15 @@ def main():
                     elif current_sprites == pause_menu_sprites:
                         current_sprites = game_sprites
 
+        # Ставим на фон изображение
         screen.blit(background, (0, 0))
+        # Рисуем облака и обновляем их позиции на фоне
+        cloud_sprites.update()
+        cloud_sprites.draw(screen)
+        # Рисуем текущие спрайты на экране и обновляем их
         current_sprites.draw(screen)
         current_sprites.update()
+
         clock.tick(FPS)
         pygame.display.flip()
 
