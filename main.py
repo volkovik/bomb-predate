@@ -183,6 +183,35 @@ class Cloud(pygame.sprite.Sprite):
                 self.kill()
 
 
+class Text(pygame.sprite.Sprite):
+    def __init__(self, text, x, y, size, color, alpha=255, font="Sweet Macarons", group=None):
+        """
+        Текст-спрайт
+
+        :param text: текст
+        :param x: координата x середины текста
+        :param y: координата y середины текста
+        :param size: размер шрифта
+        :param color: цвет текста
+        :param alpha: прозрачность текста
+        :param font: шрифт
+        :param group: группа спрайтов
+        """
+        if group:
+            super(Text, self).__init__(group)
+        else:
+            super(Text, self).__init__()
+
+        self.font = pygame.font.Font(f"data/{font}.ttf", size)
+        self.text = self.font.render(text, True, color)
+        self.text.set_alpha(alpha)
+        self.image = pygame.Surface((self.text.get_width(), self.text.get_height()), pygame.SRCALPHA, 32)
+        self.rect = self.image.get_rect()
+        self.rect.x = x - self.rect.w / 2
+        self.rect.y = y - self.rect.h / 2
+        self.image.blit(self.text, (0, 0))
+
+
 def make_menu(button_names, sprite_group):
     """
     Создаёт кнопки в середине экрана
@@ -199,11 +228,6 @@ def make_menu(button_names, sprite_group):
         Button(name, event, (start_x, start_y + (but_h + 15) * num), groups=(sprite_group,))
 
 
-def make_clouds():
-    for i in range(10):
-        Cloud(cloud_sprites)
-
-
 def make_start_menu():
     """Создаёт стартовое меню"""
     make_menu(
@@ -212,6 +236,9 @@ def make_start_menu():
             "Выйти из игры": pygame.QUIT
         }, start_menu_sprites
     )
+
+    Text("BombPredate", WIDTH / 2 + 2, HEIGHT / 5 + 3, 70, (0, 0, 0), 175, group=start_menu_sprites)  # Тень текста
+    Text("BombPredate", WIDTH / 2, HEIGHT / 5, 70, (102, 222, 78), group=start_menu_sprites)
 
 
 def main():
