@@ -144,13 +144,15 @@ class Button(pygame.sprite.Sprite):
 class Cloud(pygame.sprite.Sprite):
     duplicate = False
     images = [load_image(f"cloud{i}.png") for i in range(1, 5)]
-    transition_w = max(images, key=lambda i: i.get_rect().w).get_rect().w
 
     def __init__(self, group, x=None, y=None, cloud_index=None):
         """
         Спрайт облака, украшение
 
         :param group: группа спрайтов
+        :param x: расположение спрайта по координате x
+        :param y: расположение спрайта по координате y
+        :param cloud_index: вид облака
         """
         super(Cloud, self).__init__(group)
         if cloud_index:
