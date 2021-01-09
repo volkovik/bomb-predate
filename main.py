@@ -52,6 +52,36 @@ def load_image(name, colorkey=None):
     return image
 
 
+class Board:
+    def __init__(self, cell_size):
+        """
+        Игровая доска, которая подстраивается под размеры окна игры
+
+        :param cell_size: размер клетки
+        """
+        self.rows = (WIDTH - 20) // cell_size
+        self.columns = (HEIGHT - 20) // cell_size
+        self.board = [[None] * self.columns for _ in range(self.rows)]
+
+        self.left = (WIDTH - 20) % cell_size // 2 + 10
+        self.top = (HEIGHT - 20) % cell_size // 2 + 10
+        self.cell_size = cell_size
+
+    def render(self, surface):
+        for i in range(self.rows):
+            for j in range(self.columns):
+                pygame.draw.rect(
+                    surface, (65, 194, 48),
+                    (self.left + i * self.cell_size, self.top + j * self.cell_size,
+                     self.cell_size, self.cell_size)
+                )
+                pygame.draw.rect(
+                    surface, (66, 201, 48),
+                    (self.left + i * self.cell_size, self.top + j * self.cell_size,
+                     self.cell_size, self.cell_size), 1
+                )
+
+
 class Button(pygame.sprite.Sprite):
     clicked = False
     hovered = False
@@ -248,6 +278,7 @@ def main():
     clock = pygame.time.Clock()
 
     background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
+    board = Board(45)
 
     # Создаём облака под фон
     for i in range(10):
@@ -299,6 +330,9 @@ def main():
         # Рисуем текущие спрайты на экране и обновляем их
         current_sprites.draw(screen)
         current_sprites.update()
+
+        if current_sprites == game_sprites:
+            board.render(screen)
 
         clock.tick(FPS)
         pygame.display.flip()
