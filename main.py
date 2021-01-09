@@ -68,6 +68,11 @@ class Board:
         self.cell_size = cell_size
 
     def render(self, surface):
+        """
+        Нарисовать доску на экране
+
+        :param surface: pygame.Surface
+        """
         for i in range(self.rows):
             for j in range(self.columns):
                 pygame.draw.rect(
@@ -80,6 +85,21 @@ class Board:
                     (self.left + i * self.cell_size, self.top + j * self.cell_size,
                      self.cell_size, self.cell_size), 1
                 )
+
+    def get_cell(self, mouse_pos):
+        """
+        Определяет клетку, на которой находится координата
+
+        :param mouse_pos: координата x, y
+        :return: выдаёт номер колонки и строки клетки
+        """
+        board_x, board_y = mouse_pos[0] - self.left, mouse_pos[1] - self.top
+        row, column = board_x // self.cell_size, board_y // self.cell_size
+
+        if board_x >= 0 and board_y >= 0 and row <= self.rows - 1 and column <= self.columns - 1:
+            return row, column
+        else:
+            return None
 
 
 class Button(pygame.sprite.Sprite):
