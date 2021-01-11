@@ -1,3 +1,4 @@
+import math
 import os
 import random
 import sys
@@ -7,6 +8,7 @@ import pygame
 
 SIZE = WIDTH, HEIGHT = 700, 500  # Размеры окна
 FPS = 60  # Количество кадром в секунду
+PLAYER_VELOCITY = 2
 
 # Инициализация окна pygame
 pygame.init()
@@ -20,6 +22,7 @@ PAUSE = pygame.USEREVENT + 3
 
 # Спрайты
 game_sprites = pygame.sprite.Group()  # Спрайты игры
+borders_sprites = pygame.sprite.Group()
 start_menu_sprites = pygame.sprite.Group()  # Спрайты главного меню
 cloud_sprites = pygame.sprite.Group()  # Спрайты облаков
 pause_menu_sprites = pygame.sprite.Group()  # Спрайты меню паузы
@@ -52,6 +55,18 @@ def load_image(name, colorkey=None):
     return image
 
 
+class Border(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2):
+        super(Border, self).__init__(game_sprites, borders_sprites)
+
+        if x1 == x2:
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
+        else:
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
+
+
 class Board:
     def __init__(self, cell_size):
         """
@@ -59,13 +74,22 @@ class Board:
 
         :param cell_size: размер клетки
         """
-        self.rows = (WIDTH - 20) // cell_size
-        self.columns = (HEIGHT - 20) // cell_size
+        self.rows = (HEIGHT - 20) // cell_size
+        self.columns = (WIDTH - 20) // cell_size
         self.board = [[None] * self.columns for _ in range(self.rows)]
 
         self.left = (WIDTH - 20) % cell_size // 2 + 10
         self.top = (HEIGHT - 20) % cell_size // 2 + 10
         self.cell_size = cell_size
+
+        self.width = cell_size * self.columns
+        self.height = cell_size * self.rows
+
+        for i in range(self.left, self.left + self.width + 1, self.width):
+            Border(i, self.top, i, self.top + self.height + 1)
+
+        for i in range(self.top, self.top + self.height + 1, self.height):
+            Border(self.left, i, self.left + self.width + 1, i)
 
     def render(self, surface):
         """
@@ -77,12 +101,12 @@ class Board:
             for j in range(self.columns):
                 pygame.draw.rect(
                     surface, (65, 194, 48),
-                    (self.left + i * self.cell_size, self.top + j * self.cell_size,
+                    (self.left + j * self.cell_size, self.top + i * self.cell_size,
                      self.cell_size, self.cell_size)
                 )
                 pygame.draw.rect(
                     surface, (66, 201, 48),
-                    (self.left + i * self.cell_size, self.top + j * self.cell_size,
+                    (self.left + j * self.cell_size, self.top + i * self.cell_size,
                      self.cell_size, self.cell_size), 1
                 )
 
@@ -106,13 +130,20 @@ class Entity(pygame.sprite.Sprite):
     def __init__(self, width, board):
         super(Entity, self).__init__(game_sprites)
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
-        self.rect = pygame.Rect(board.left, board.top, width, width)
+        self.rect = pygame.Rect(board.left + 1, board.top + 1, width, width)
 
         pygame.draw.circle(self.image, pygame.Color(255, 255, 255), (width // 2, width // 2), width // 2)
 
     def move(self, x, y):
         self.rect.x += x
+        i = x
+        while pygame.sprite.spritecollideany(self, borders_sprites):
+            self.rect.x -= i // 2
+
         self.rect.y += y
+        i = y
+        while pygame.sprite.spritecollideany(self, borders_sprites):
+            self.rect.y -= i // 2
 
 
 class Button(pygame.sprite.Sprite):
@@ -359,13 +390,13 @@ def main():
         pressed = pygame.key.get_pressed()
 
         if pressed[pygame.K_w] or pressed[pygame.K_UP]:
-            player.move(0, -1)
+            player.move(0, -PLAYER_VELOCITY)
         if pressed[pygame.K_s] or pressed[pygame.K_DOWN]:
-            player.move(0, 1)
+            player.move(0, PLAYER_VELOCITY)
         if pressed[pygame.K_a] or pressed[pygame.K_LEFT]:
-            player.move(-1, 0)
+            player.move(-PLAYER_VELOCITY, 0)
         if pressed[pygame.K_d] or pressed[pygame.K_RIGHT]:
-            player.move(1, 0)
+            player.move(PLAYER_VELOCITY, 0)
 
         # Ставим на фон изображение
         screen.blit(background, (0, 0))
