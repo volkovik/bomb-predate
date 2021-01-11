@@ -102,6 +102,19 @@ class Board:
             return None
 
 
+class Entity(pygame.sprite.Sprite):
+    def __init__(self, width, board):
+        super(Entity, self).__init__(game_sprites)
+        self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
+        self.rect = pygame.Rect(board.left, board.top, width, width)
+
+        pygame.draw.circle(self.image, pygame.Color(255, 255, 255), (width // 2, width // 2), width // 2)
+
+    def move(self, x, y):
+        self.rect.x += x
+        self.rect.y += y
+
+
 class Button(pygame.sprite.Sprite):
     clicked = False
     hovered = False
@@ -299,6 +312,7 @@ def main():
 
     background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
     board = Board(45)
+    player = Entity(35, board)
 
     # Создаём облака под фон
     for i in range(10):
@@ -342,17 +356,29 @@ def main():
                     elif current_sprites == pause_menu_sprites:
                         current_sprites = game_sprites
 
+        pressed = pygame.key.get_pressed()
+
+        if pressed[pygame.K_w] or pressed[pygame.K_UP]:
+            player.move(0, -1)
+        if pressed[pygame.K_s] or pressed[pygame.K_DOWN]:
+            player.move(0, 1)
+        if pressed[pygame.K_a] or pressed[pygame.K_LEFT]:
+            player.move(-1, 0)
+        if pressed[pygame.K_d] or pressed[pygame.K_RIGHT]:
+            player.move(1, 0)
+
         # Ставим на фон изображение
         screen.blit(background, (0, 0))
         # Рисуем облака и обновляем их позиции на фоне
         cloud_sprites.update()
         cloud_sprites.draw(screen)
-        # Рисуем текущие спрайты на экране и обновляем их
-        current_sprites.draw(screen)
-        current_sprites.update()
 
         if current_sprites == game_sprites:
             board.render(screen)
+
+        # Рисуем текущие спрайты на экране и обновляем их
+        current_sprites.draw(screen)
+        current_sprites.update()
 
         clock.tick(FPS)
         pygame.display.flip()
