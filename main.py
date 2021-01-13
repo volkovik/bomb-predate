@@ -127,10 +127,15 @@ class Board:
 
 
 class Entity(pygame.sprite.Sprite):
-    def __init__(self, width, board):
+    def __init__(self, board, cell_point=(0, 0)):
         super(Entity, self).__init__(game_sprites)
+        width = board.cell_size - 10
+
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
-        self.rect = pygame.Rect(board.left + 1, board.top + 1, width, width)
+        self.rect = pygame.Rect(
+            board.left + 5 + board.cell_size * cell_point[1], board.top + 5 + board.cell_size * cell_point[0],
+            width, width
+        )
 
         pygame.draw.circle(self.image, pygame.Color(255, 255, 255), (width // 2, width // 2), width // 2)
 
@@ -343,7 +348,7 @@ def main():
 
     background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
     board = Board(45)
-    player = Entity(35, board)
+    player = Entity(board, (random.randrange(board.rows), random.randrange(board.columns)))
 
     # Создаём облака под фон
     for i in range(10):
@@ -372,6 +377,8 @@ def main():
             # Если игрок начинает игру заново или впервые начал её
             if event.type == START_GAME:
                 current_sprites = game_sprites
+                game_sprites.empty()
+                player = Entity(board, (random.randrange(board.rows), random.randrange(board.columns)))
             # Если игрок был в меню паузы и решил продолжить игру
             if event.type == CONTINUE_GAME:
                 current_sprites = game_sprites
@@ -387,25 +394,27 @@ def main():
                     elif current_sprites == pause_menu_sprites:
                         current_sprites = game_sprites
 
-        pressed = pygame.key.get_pressed()
-
-        if pressed[pygame.K_w] or pressed[pygame.K_UP]:
-            player.move(0, -PLAYER_VELOCITY)
-        if pressed[pygame.K_s] or pressed[pygame.K_DOWN]:
-            player.move(0, PLAYER_VELOCITY)
-        if pressed[pygame.K_a] or pressed[pygame.K_LEFT]:
-            player.move(-PLAYER_VELOCITY, 0)
-        if pressed[pygame.K_d] or pressed[pygame.K_RIGHT]:
-            player.move(PLAYER_VELOCITY, 0)
-
         # Ставим на фон изображение
         screen.blit(background, (0, 0))
         # Рисуем облака и обновляем их позиции на фоне
         cloud_sprites.update()
         cloud_sprites.draw(screen)
 
+        # Если текущие спрайты игровые, то прорисовать доску и инициализировать управление
         if current_sprites == game_sprites:
             board.render(screen)
+
+            # Движение на поле
+            pressed = pygame.key.get_pressed()
+
+            if pressed[pygame.K_w] or pressed[pygame.K_UP]:
+                player.move(0, -PLAYER_VELOCITY)
+            if pressed[pygame.K_s] or pressed[pygame.K_DOWN]:
+                player.move(0, PLAYER_VELOCITY)
+            if pressed[pygame.K_a] or pressed[pygame.K_LEFT]:
+                player.move(-PLAYER_VELOCITY, 0)
+            if pressed[pygame.K_d] or pressed[pygame.K_RIGHT]:
+                player.move(PLAYER_VELOCITY, 0)
 
         # Рисуем текущие спрайты на экране и обновляем их
         current_sprites.draw(screen)
