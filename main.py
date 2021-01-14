@@ -22,7 +22,7 @@ PAUSE = pygame.USEREVENT + 3
 
 # Спрайты
 game_sprites = pygame.sprite.Group()  # Спрайты игры
-borders_sprites = pygame.sprite.Group()
+collide_game_sprites = pygame.sprite.Group()  # Спрайты игры, которые не могут пройти сквозь друг друга
 start_menu_sprites = pygame.sprite.Group()  # Спрайты главного меню
 cloud_sprites = pygame.sprite.Group()  # Спрайты облаков
 pause_menu_sprites = pygame.sprite.Group()  # Спрайты меню паузы
@@ -57,7 +57,7 @@ def load_image(name, colorkey=None):
 
 class Border(pygame.sprite.Sprite):
     def __init__(self, x1, y1, x2, y2):
-        super(Border, self).__init__(game_sprites, borders_sprites)
+        super(Border, self).__init__(game_sprites, collide_game_sprites)
 
         if x1 == x2:
             self.image = pygame.Surface([1, y2 - y1])
@@ -100,12 +100,12 @@ class Board:
         for i in range(self.rows):
             for j in range(self.columns):
                 pygame.draw.rect(
-                    surface, (65, 194, 48),
+                    surface, (180, 219, 50),
                     (self.left + j * self.cell_size, self.top + i * self.cell_size,
                      self.cell_size, self.cell_size)
                 )
                 pygame.draw.rect(
-                    surface, (66, 201, 48),
+                    surface, (157, 189, 53),
                     (self.left + j * self.cell_size, self.top + i * self.cell_size,
                      self.cell_size, self.cell_size), 1
                 )
@@ -127,8 +127,14 @@ class Board:
 
 
 class Entity(pygame.sprite.Sprite):
-    def __init__(self, board, cell_point=(0, 0)):
-        super(Entity, self).__init__(game_sprites)
+    def __init__(self, board, cell_point=(0, 0), color=pygame.Color(255, 255, 255)):
+        """
+        Так называемая "сущность". Базовый класс для реализации игрока и противников.
+
+        :param board: класс Board
+        :param cell_point: позиция клетки, на которой будет первоначальная позиция сущности (row, column)
+        """
+        super(Entity, self).__init__(game_sprites, collide_game_sprites)
         width = board.cell_size - 10
 
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
@@ -137,18 +143,49 @@ class Entity(pygame.sprite.Sprite):
             width, width
         )
 
-        pygame.draw.circle(self.image, pygame.Color(255, 255, 255), (width // 2, width // 2), width // 2)
+        pygame.draw.circle(self.image, color, (width // 2, width // 2), width // 2)
+        pygame.draw.circle(
+            self.image,
+            (int(color.r * .75), int(color.g * .75), int(color.b * .75)),
+            (width // 2, width // 2), width // 2, 1
+        )
 
     def move(self, x, y):
         self.rect.x += x
         i = x
-        while pygame.sprite.spritecollideany(self, borders_sprites):
+
+        collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
+        collide_sprites.remove(self)
+
+        while collide_sprites:
             self.rect.x -= i // 2
+
+            collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
+            collide_sprites.remove(self)
 
         self.rect.y += y
         i = y
-        while pygame.sprite.spritecollideany(self, borders_sprites):
+
+        collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
+        collide_sprites.remove(self)
+
+        while collide_sprites:
             self.rect.y -= i // 2
+
+            collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
+            collide_sprites.remove(self)
+
+
+class Player(Entity):
+    def __init__(self, board, cell_point):
+        """Сущность игрока"""
+        super(Player, self).__init__(board, cell_point, pygame.Color(0, 255, 38))
+
+
+class Enemy(Entity):
+    def __init__(self, board, cell_point):
+        """Сущность противника-бота"""
+        super(Enemy, self).__init__(board, cell_point, pygame.Color(255, 74, 74))
 
 
 class Button(pygame.sprite.Sprite):
@@ -347,8 +384,6 @@ def main():
     clock = pygame.time.Clock()
 
     background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
-    board = Board(45)
-    player = Entity(board, (random.randrange(board.rows), random.randrange(board.columns)))
 
     # Создаём облака под фон
     for i in range(10):
@@ -378,7 +413,27 @@ def main():
             if event.type == START_GAME:
                 current_sprites = game_sprites
                 game_sprites.empty()
-                player = Entity(board, (random.randrange(board.rows), random.randrange(board.columns)))
+                collide_game_sprites.empty()
+                board = Board(45)
+
+                enemies_coords = []
+
+                for i in range(25):
+                    while True:
+                        coord = (random.randrange(board.rows), random.randrange(board.columns))
+
+                        if coord not in enemies_coords:
+                            enemies_coords.append(coord)
+                            Enemy(board, coord)
+                            break
+
+                while True:
+                    coord = (random.randrange(board.rows), random.randrange(board.columns))
+
+                    if coord not in enemies_coords:
+                        player = Player(board, coord)
+                        break
+
             # Если игрок был в меню паузы и решил продолжить игру
             if event.type == CONTINUE_GAME:
                 current_sprites = game_sprites
