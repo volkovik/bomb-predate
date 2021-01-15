@@ -151,29 +151,29 @@ class Entity(pygame.sprite.Sprite):
         )
 
     def move(self, x, y):
+        """
+        Движение сущности
+
+        :param x: количество клеток по x
+        :param y: количество клеток по y
+        :return:
+        """
         self.rect.x += x
         i = x
 
-        collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
-        collide_sprites.remove(self)
+        def collided_sprites():
+            s = pygame.sprite.spritecollide(self, collide_game_sprites, False, pygame.sprite.collide_mask)
+            s.remove(self)
+            return s
 
-        while collide_sprites:
+        while collided_sprites():
             self.rect.x -= i // 2
-
-            collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
-            collide_sprites.remove(self)
 
         self.rect.y += y
         i = y
 
-        collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
-        collide_sprites.remove(self)
-
-        while collide_sprites:
+        while collided_sprites():
             self.rect.y -= i // 2
-
-            collide_sprites = pygame.sprite.spritecollide(self, collide_game_sprites, False)
-            collide_sprites.remove(self)
 
 
 class Player(Entity):
