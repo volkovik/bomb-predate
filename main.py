@@ -147,7 +147,7 @@ class Entity(pygame.sprite.Sprite):
         pygame.draw.circle(
             self.image,
             (int(color.r * .75), int(color.g * .75), int(color.b * .75)),
-            (width // 2, width // 2), width // 2, 1
+            (width // 2, width // 2), width // 2, 2
         )
 
     def move(self, x, y):
@@ -158,13 +158,13 @@ class Entity(pygame.sprite.Sprite):
         :param y: количество клеток по y
         :return:
         """
-        self.rect.x += x
-        i = x
-
         def collided_sprites():
             s = pygame.sprite.spritecollide(self, collide_game_sprites, False, pygame.sprite.collide_mask)
             s.remove(self)
             return s
+
+        self.rect.x += x
+        i = x
 
         while collided_sprites():
             self.rect.x -= i // 2
@@ -186,6 +186,31 @@ class Enemy(Entity):
     def __init__(self, board, cell_point):
         """Сущность противника-бота"""
         super(Enemy, self).__init__(board, cell_point, pygame.Color(255, 74, 74))
+
+
+class Box(pygame.sprite.Sprite):
+    def __init__(self, board, cell_point=(0, 0)):
+        super(Box, self).__init__(game_sprites, collide_game_sprites)
+        width = board.cell_size - 10
+        color = pygame.Color(212, 169, 116)
+
+        self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
+        self.rect = pygame.Rect(
+            board.left + 5 + board.cell_size * cell_point[1], board.top + 5 + board.cell_size * cell_point[0],
+            width, width
+        )
+
+        pygame.draw.rect(self.image, color, (0, 0, width, width))
+        pygame.draw.line(
+            self.image,
+            (int(color.r * .7), int(color.g * .7), int(color.b * .7)),
+            (0, 0), (width, width), 8
+        )
+        pygame.draw.rect(
+            self.image,
+            (int(color.r * .75), int(color.g * .75), int(color.b * .75)),
+            (0, 0, width, width), 9
+        )
 
 
 class Button(pygame.sprite.Sprite):
@@ -416,21 +441,30 @@ def main():
                 collide_game_sprites.empty()
                 board = Board(45)
 
-                enemies_coords = []
+                coords = []
 
                 for i in range(25):
                     while True:
                         coord = (random.randrange(board.rows), random.randrange(board.columns))
 
-                        if coord not in enemies_coords:
-                            enemies_coords.append(coord)
+                        if coord not in coords:
+                            coords.append(coord)
+                            Box(board, coord)
+                            break
+
+                for i in range(5):
+                    while True:
+                        coord = (random.randrange(board.rows), random.randrange(board.columns))
+
+                        if coord not in coords:
+                            coords.append(coord)
                             Enemy(board, coord)
                             break
 
                 while True:
                     coord = (random.randrange(board.rows), random.randrange(board.columns))
 
-                    if coord not in enemies_coords:
+                    if coord not in coords:
                         player = Player(board, coord)
                         break
 
