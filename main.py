@@ -211,6 +211,27 @@ class Box(pygame.sprite.Sprite):
             (int(color.r * .75), int(color.g * .75), int(color.b * .75)),
             (0, 0, width, width), 9
         )
+        
+        
+class Bomb(pygame.sprite.Sprite):
+    def __init__(self, board, cell_point=(0, 0)):
+        super(Bomb, self).__init__(game_sprites)
+
+        width = board.cell_size - 20
+        color = pygame.Color(59, 59, 59)
+
+        self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
+        self.rect = pygame.Rect(
+            board.left + 10 + board.cell_size * cell_point[1], board.top + 10 + board.cell_size * cell_point[0],
+            width, width
+        )
+
+        pygame.draw.circle(self.image, color, (width // 2, width // 2), width // 2)
+        pygame.draw.circle(
+            self.image,
+            (int(color.r * .75), int(color.g * .75), int(color.b * .75)),
+            (width // 2, width // 2), width // 2, 2
+        )
 
 
 class Button(pygame.sprite.Sprite):
@@ -458,7 +479,7 @@ def main():
 
                         if coord not in coords:
                             coords.append(coord)
-                            Enemy(board, coord)
+                            Bomb(board, coord)
                             break
 
                 while True:
