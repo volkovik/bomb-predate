@@ -1,4 +1,3 @@
-import math
 import os
 import random
 import sys
@@ -22,6 +21,8 @@ PAUSE = pygame.USEREVENT + 3
 
 # Спрайты
 game_sprites = pygame.sprite.Group()  # Спрайты игры
+entities_sprites = pygame.sprite.Group()
+items_sprites = pygame.sprite.Group()
 collide_game_sprites = pygame.sprite.Group()  # Спрайты игры, которые не могут пройти сквозь друг друга
 start_menu_sprites = pygame.sprite.Group()  # Спрайты главного меню
 cloud_sprites = pygame.sprite.Group()  # Спрайты облаков
@@ -118,12 +119,18 @@ class Board:
         :return: выдаёт номер колонки и строки клетки
         """
         board_x, board_y = mouse_pos[0] - self.left, mouse_pos[1] - self.top
-        row, column = board_x // self.cell_size, board_y // self.cell_size
+        row, column = board_y // self.cell_size, board_x // self.cell_size
 
         if board_x >= 0 and board_y >= 0 and row <= self.rows - 1 and column <= self.columns - 1:
             return row, column
         else:
             return None
+
+    def place_item(self, cell_point, item):
+        self.board[cell_point[0]][cell_point[1]] = item
+
+    def delete_item(self, cell_point):
+        self.board[cell_point[0]][cell_point[1]] = None
 
 
 class Entity(pygame.sprite.Sprite):
@@ -134,8 +141,10 @@ class Entity(pygame.sprite.Sprite):
         :param board: класс Board
         :param cell_point: позиция клетки, на которой будет первоначальная позиция сущности (row, column)
         """
-        super(Entity, self).__init__(game_sprites, collide_game_sprites)
+        super(Entity, self).__init__(game_sprites, entities_sprites, collide_game_sprites)
         width = board.cell_size - 10
+
+        self.board = board
 
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
         self.rect = pygame.Rect(
@@ -175,6 +184,11 @@ class Entity(pygame.sprite.Sprite):
         while collided_sprites():
             self.rect.y -= i // 2
 
+    def place_bomb(self):
+        cell_point = self.board.get_cell((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2))
+
+        Bomb(self.board, cell_point)
+
 
 class Player(Entity):
     def __init__(self, board, cell_point):
@@ -190,7 +204,7 @@ class Enemy(Entity):
 
 class Box(pygame.sprite.Sprite):
     def __init__(self, board, cell_point=(0, 0)):
-        super(Box, self).__init__(game_sprites, collide_game_sprites)
+        super(Box, self).__init__(game_sprites, items_sprites, collide_game_sprites)
         width = board.cell_size - 10
         color = pygame.Color(212, 169, 116)
 
@@ -211,11 +225,13 @@ class Box(pygame.sprite.Sprite):
             (int(color.r * .75), int(color.g * .75), int(color.b * .75)),
             (0, 0, width, width), 9
         )
+
+        board.place_item(cell_point, self)
         
         
 class Bomb(pygame.sprite.Sprite):
     def __init__(self, board, cell_point=(0, 0)):
-        super(Bomb, self).__init__(game_sprites)
+        super(Bomb, self).__init__(game_sprites, items_sprites)
 
         width = board.cell_size - 20
         color = pygame.Color(59, 59, 59)
@@ -232,6 +248,8 @@ class Bomb(pygame.sprite.Sprite):
             (int(color.r * .75), int(color.g * .75), int(color.b * .75)),
             (width // 2, width // 2), width // 2, 2
         )
+
+        board.place_item(cell_point, self)
 
 
 class Button(pygame.sprite.Sprite):
@@ -479,7 +497,7 @@ def main():
 
                         if coord not in coords:
                             coords.append(coord)
-                            Bomb(board, coord)
+                            Enemy(board, coord)
                             break
 
                 while True:
@@ -492,6 +510,7 @@ def main():
             # Если игрок был в меню паузы и решил продолжить игру
             if event.type == CONTINUE_GAME:
                 current_sprites = game_sprites
+
             # Если игрок нажал на кнопку
             if event.type == pygame.KEYDOWN:
                 key = event.key
@@ -503,6 +522,9 @@ def main():
                     # Если игрок был в меню паузы, то при нажатии ESC он вернётся в игру
                     elif current_sprites == pause_menu_sprites:
                         current_sprites = game_sprites
+
+                if key == pygame.K_e and current_sprites == game_sprites:
+                    player.place_bomb()
 
         # Ставим на фон изображение
         screen.blit(background, (0, 0))
@@ -526,9 +548,12 @@ def main():
             if pressed[pygame.K_d] or pressed[pygame.K_RIGHT]:
                 player.move(PLAYER_VELOCITY, 0)
 
-        # Рисуем текущие спрайты на экране и обновляем их
-        current_sprites.draw(screen)
-        current_sprites.update()
+            items_sprites.draw(screen)
+            entities_sprites.draw(screen)
+        else:
+            # Рисуем текущие спрайты на экране и обновляем их
+            current_sprites.draw(screen)
+            current_sprites.update()
 
         clock.tick(FPS)
         pygame.display.flip()
