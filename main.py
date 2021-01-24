@@ -138,6 +138,12 @@ class Board:
 
 
 class Entity(pygame.sprite.Sprite):
+    up_key = pygame.K_w
+    down_key = pygame.K_s
+    right_key = pygame.K_d
+    left_key = pygame.K_a
+    bomb_key = pygame.K_e
+
     def __init__(self, board, cell_point=(0, 0), color=pygame.Color(255, 255, 255)):
         """
         Так называемая "сущность". Базовый класс для реализации игрока и противников.
@@ -188,6 +194,22 @@ class Entity(pygame.sprite.Sprite):
         while collided_sprites():
             self.rect.y -= i // 2
 
+    def update(self, event=None):
+        # Управление игроком
+        pressed = pygame.key.get_pressed()
+        mod_pressed = pygame.key.get_mods()
+
+        if pressed[self.up_key]:
+            self.move(0, -PLAYER_VELOCITY)
+        if pressed[self.down_key]:
+            self.move(0, PLAYER_VELOCITY)
+        if pressed[self.left_key]:
+            self.move(-PLAYER_VELOCITY, 0)
+        if pressed[self.right_key]:
+            self.move(PLAYER_VELOCITY, 0)
+        if pressed[self.bomb_key] or mod_pressed & self.bomb_key:
+            self.place_bomb()
+
     def place_bomb(self):
         cell_point = self.board.get_cell((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2))
 
@@ -201,6 +223,12 @@ class Player(Entity):
 
 
 class Enemy(Entity):
+    up_key = pygame.K_UP
+    down_key = pygame.K_DOWN
+    right_key = pygame.K_RIGHT
+    left_key = pygame.K_LEFT
+    bomb_key = pygame.KMOD_CTRL
+
     def __init__(self, board, cell_point):
         """Сущность противника-бота"""
         super(Enemy, self).__init__(board, cell_point, pygame.Color(255, 74, 74))
@@ -500,20 +528,20 @@ def main():
                             Box(board, coord)
                             break
 
-                for i in range(5):
-                    while True:
-                        coord = (random.randrange(board.rows), random.randrange(board.columns))
+                while True:
+                    coord = (random.randrange(board.rows), random.randrange(board.columns))
 
-                        if coord not in coords:
-                            coords.append(coord)
-                            Enemy(board, coord)
-                            break
+                    if coord not in coords:
+                        Player(board, coord)
+                        coords.append(coord)
+                        break
 
                 while True:
                     coord = (random.randrange(board.rows), random.randrange(board.columns))
 
                     if coord not in coords:
-                        player = Player(board, coord)
+                        Enemy(board, coord)
+                        coords.append(coord)
                         break
 
             # Если игрок был в меню паузы и решил продолжить игру
@@ -532,31 +560,17 @@ def main():
                     elif current_event == PAUSE_MENU:
                         current_event = GAME
 
-                if key == pygame.K_e and current_event == GAME:
-                    player.place_bomb()
-
         # Ставим на фон изображение
         screen.blit(background, (0, 0))
         # Рисуем облака и обновляем их позиции на фоне
         cloud_sprites.update()
         cloud_sprites.draw(screen)
 
-        # Если текущие спрайты игровые, то прорисовать доску и инициализировать управление
+        # Если текущие спрайты игровые, то прорисовать доску и спрайты и инициализировать управление
         if current_event == GAME:
             board.render(screen)
 
-            # Движение на поле
-            pressed = pygame.key.get_pressed()
-
-            if pressed[pygame.K_w] or pressed[pygame.K_UP]:
-                player.move(0, -PLAYER_VELOCITY)
-            if pressed[pygame.K_s] or pressed[pygame.K_DOWN]:
-                player.move(0, PLAYER_VELOCITY)
-            if pressed[pygame.K_a] or pressed[pygame.K_LEFT]:
-                player.move(-PLAYER_VELOCITY, 0)
-            if pressed[pygame.K_d] or pressed[pygame.K_RIGHT]:
-                player.move(PLAYER_VELOCITY, 0)
-
+            entities_sprites.update()
             items_sprites.draw(screen)
             entities_sprites.draw(screen)
         elif current_event == PAUSE_MENU:
