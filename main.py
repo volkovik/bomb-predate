@@ -156,7 +156,7 @@ class Board:
         :param y: столбец
         :param item: спрайт
         """
-        if self.board[x][y] is None:
+        if self.board[x][y] is not None:
             self.board[x][y].kill()
 
         self.board[x][y] = item
