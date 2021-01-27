@@ -73,6 +73,8 @@ class Border(pygame.sprite.Sprite):
 
 
 class Board:
+    players = []
+
     def __init__(self, cell_size):
         """
         Игровая доска, которая подстраивается под размеры окна игры
@@ -130,11 +132,44 @@ class Board:
         else:
             return None
 
-    def place_item(self, cell_point, item):
-        self.board[cell_point[0]][cell_point[1]] = item
+    def add_player(self, player):
+        """
+        Добавить игрока на доску
+        :param player: Entity, класс сущности
+        """
+        self.players.append(player)
 
-    def delete_item(self, cell_point):
-        self.board[cell_point[0]][cell_point[1]] = None
+    def kill_player_if_exists(self, x, y):
+        """
+        Убить игрока, если он стоит на клетке по координатам x, y
+        :param x: строка
+        :param y: столбец
+        """
+        for player in self.players:
+            if self.get_cell((player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2)) == (x, y):
+                player.kill()
+
+    def place_item(self, x, y, item):
+        """
+        Поставить спрайт на определённую клетку
+        :param x: строка
+        :param y: столбец
+        :param item: спрайт
+        """
+        if self.board[x][y] is None:
+            self.board[x][y].kill()
+
+        self.board[x][y] = item
+
+    def delete_item(self, x, y):
+        """
+        Удалить спрайт с доски и убить его
+        :param x: строка
+        :param y: столбец
+        """
+        if self.board[x][y] is not None:
+            self.board[x][y].kill()
+            self.board[x][y] = None
 
 
 class Entity(pygame.sprite.Sprite):
@@ -211,9 +246,8 @@ class Entity(pygame.sprite.Sprite):
             self.place_bomb()
 
     def place_bomb(self):
-        cell_point = self.board.get_cell((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2))
-
-        Bomb(self.board, cell_point)
+        """Поставить бомбу на место, где стоит данный игрок"""
+        Bomb(self.board, self.board.get_cell((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2)))
 
 
 class Player(Entity):
@@ -258,7 +292,7 @@ class Box(pygame.sprite.Sprite):
             (0, 0, width, width), 9
         )
 
-        board.place_item(cell_point, self)
+        board.place_item(*cell_point, self)
         
         
 class Bomb(pygame.sprite.Sprite):
@@ -281,7 +315,27 @@ class Bomb(pygame.sprite.Sprite):
             (width // 2, width // 2), width // 2, 2
         )
 
-        board.place_item(cell_point, self)
+        board.place_item(*cell_point, self)
+
+        self.board = board
+        self.cell_point = cell_point
+        self.clock = pygame.time.Clock()
+        self.timer = 0
+
+    def update(self, event=None):
+        self.timer += self.clock.tick()
+
+        if self.timer >= 1500:
+            self.kill()
+            self.board.board[self.cell_point[0]][self.cell_point[1]] = None
+
+            for x in range(self.board.rows):
+                self.board.delete_item(x, self.cell_point[1])
+                self.board.kill_player_if_exists(x, self.cell_point[1])
+
+            for y in range(self.board.columns):
+                self.board.delete_item(self.cell_point[0], y)
+                self.board.kill_player_if_exists(self.cell_point[0], y)
 
 
 class Button(pygame.sprite.Sprite):
@@ -532,7 +586,7 @@ def main():
                     coord = (random.randrange(board.rows), random.randrange(board.columns))
 
                     if coord not in coords:
-                        Player(board, coord)
+                        board.add_player(Player(board, coord))
                         coords.append(coord)
                         break
 
@@ -540,7 +594,7 @@ def main():
                     coord = (random.randrange(board.rows), random.randrange(board.columns))
 
                     if coord not in coords:
-                        Enemy(board, coord)
+                        board.add_player(Enemy(board, coord))
                         coords.append(coord)
                         break
 
@@ -571,6 +625,7 @@ def main():
             board.render(screen)
 
             entities_sprites.update()
+            items_sprites.update()
             items_sprites.draw(screen)
             entities_sprites.draw(screen)
         elif current_event == PAUSE_MENU:
