@@ -18,19 +18,27 @@ screen = pygame.display.set_mode(SIZE)
 START_GAME = pygame.USEREVENT + 1
 CONTINUE_GAME = pygame.USEREVENT + 2
 PAUSE = pygame.USEREVENT + 3
+MAIN_MENU = pygame.USEREVENT + 4
+PLAYER_WON = pygame.USEREVENT + 5
+ENEMY_WON = pygame.USEREVENT + 6
 
 # Состояния игры
 START_MENU = 100
 PAUSE_MENU = 101
 GAME = 102
+GAME_ENDED_MENU = 103
 
-# Спрайты
+# Основные спрайты
 entities_sprites = pygame.sprite.Group()  # Спрайты сущностей (игроки)
 items_sprites = pygame.sprite.Group()  # Спрайты препятсвий, предметов и т.д.
 collide_game_sprites = pygame.sprite.Group()  # Спрайты игры, которые не могут пройти сквозь друг друга
-start_menu_sprites = pygame.sprite.Group()  # Спрайты главного меню
+
 cloud_sprites = pygame.sprite.Group()  # Спрайты облаков
+
+# Спрайты меню
+start_menu_sprites = pygame.sprite.Group()  # Спрайты главного меню
 pause_menu_sprites = pygame.sprite.Group()  # Спрайты меню паузы
+game_ended_sprites = pygame.sprite.Group()  # Спрайты меню окончания игры
 
 
 def load_image(name, colorkey=None):
@@ -62,6 +70,14 @@ def load_image(name, colorkey=None):
 
 class Border(pygame.sprite.Sprite):
     def __init__(self, x1, y1, x2, y2):
+        """
+        Игровые границы. За пределами этих границ не могут заходить игроки и другие предметы
+
+        :param x1: x первой координаты
+        :param y1: y первой координаты
+        :param x2: x второй координаты
+        :param y2: y второй координаты
+        """
         super(Border, self).__init__(collide_game_sprites)
 
         if x1 == x2:
@@ -73,8 +89,6 @@ class Border(pygame.sprite.Sprite):
 
 
 class Board:
-    players = []
-
     def __init__(self, cell_size):
         """
         Игровая доска, которая подстраивается под размеры окна игры
@@ -98,6 +112,9 @@ class Board:
         for i in range(self.top, self.top + self.height + 1, self.height):
             Border(self.left, i, self.left + self.width + 1, i)
 
+        self.loser = None
+        self.players = []
+
     def render(self, surface):
         """
         Нарисовать доску на экране
@@ -117,14 +134,14 @@ class Board:
                      self.cell_size, self.cell_size), 1
                 )
 
-    def get_cell(self, mouse_pos):
+    def get_cell(self, pos):
         """
         Определяет клетку, на которой находится координата
 
-        :param mouse_pos: координата x, y
+        :param pos: координата x, y
         :return: выдаёт номер колонки и строки клетки
         """
-        board_x, board_y = mouse_pos[0] - self.left, mouse_pos[1] - self.top
+        board_x, board_y = pos[0] - self.left, pos[1] - self.top
         row, column = board_y // self.cell_size, board_x // self.cell_size
 
         if board_x >= 0 and board_y >= 0 and row <= self.rows - 1 and column <= self.columns - 1:
@@ -135,6 +152,7 @@ class Board:
     def add_player(self, player):
         """
         Добавить игрока на доску
+
         :param player: Entity, класс сущности
         """
         self.players.append(player)
@@ -142,6 +160,7 @@ class Board:
     def kill_player_if_exists(self, x, y):
         """
         Убить игрока, если он стоит на клетке по координатам x, y
+
         :param x: строка
         :param y: столбец
         """
@@ -152,6 +171,7 @@ class Board:
     def place_item(self, x, y, item):
         """
         Поставить спрайт на определённую клетку
+
         :param x: строка
         :param y: столбец
         :param item: спрайт
@@ -164,6 +184,7 @@ class Board:
     def delete_item(self, x, y):
         """
         Удалить спрайт с доски и убить его
+
         :param x: строка
         :param y: столбец
         """
@@ -190,7 +211,7 @@ class Entity(pygame.sprite.Sprite):
         width = board.cell_size - 10
 
         self.board = board
-
+        self.color = color
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
         self.rect = pygame.Rect(
             board.left + 5 + board.cell_size * cell_point[1], board.top + 5 + board.cell_size * cell_point[0],
@@ -255,6 +276,10 @@ class Player(Entity):
         """Сущность игрока"""
         super(Player, self).__init__(board, cell_point, pygame.Color(0, 255, 38))
 
+    def kill(self):
+        super(Player, self).kill()
+        pygame.event.post(pygame.event.Event(ENEMY_WON))
+
 
 class Enemy(Entity):
     up_key = pygame.K_UP
@@ -266,6 +291,10 @@ class Enemy(Entity):
     def __init__(self, board, cell_point):
         """Сущность противника-бота"""
         super(Enemy, self).__init__(board, cell_point, pygame.Color(255, 74, 74))
+
+    def kill(self):
+        super(Enemy, self).kill()
+        pygame.event.post(pygame.event.Event(PLAYER_WON))
 
 
 class Box(pygame.sprite.Sprite):
@@ -297,6 +326,12 @@ class Box(pygame.sprite.Sprite):
         
 class Bomb(pygame.sprite.Sprite):
     def __init__(self, board, cell_point=(0, 0)):
+        """
+        Спрайт бомбы. После спайвна на доске нужно 1.5 секунд, чтобы взорваться
+
+        :param board: доска
+        :param cell_point: координата на доске, где должна стоять бомба
+        """
         super(Bomb, self).__init__(items_sprites)
 
         width = board.cell_size - 20
@@ -325,17 +360,37 @@ class Bomb(pygame.sprite.Sprite):
     def update(self, event=None):
         self.timer += self.clock.tick()
 
+        # Если прошло 1.5 секунд
         if self.timer >= 1500:
+            # Удалить бомбу и начать взрывать предметы на доске по крестовой
             self.kill()
             self.board.board[self.cell_point[0]][self.cell_point[1]] = None
 
-            for x in range(self.board.rows):
-                self.board.delete_item(x, self.cell_point[1])
-                self.board.kill_player_if_exists(x, self.cell_point[1])
+            self.board.kill_player_if_exists(self.cell_point[0], self.cell_point[1])
 
-            for y in range(self.board.columns):
-                self.board.delete_item(self.cell_point[0], y)
-                self.board.kill_player_if_exists(self.cell_point[0], y)
+            left, right = self.cell_point[1], self.cell_point[1]
+            up, down = self.cell_point[0], self.cell_point[0]
+
+            def fun(*coords):
+                self.board.kill_player_if_exists(*coords)
+                self.board.delete_item(*coords)
+
+            while True:
+                if left > 0:
+                    left -= 1
+                    fun(self.cell_point[0], left)
+                if right < self.board.columns - 1:
+                    right += 1
+                    fun(self.cell_point[0], right)
+                if up > 0:
+                    up -= 1
+                    fun(up, self.cell_point[1])
+                if down < self.board.rows - 1:
+                    down += 1
+                    fun(down, self.cell_point[1])
+
+                if left == 0 and right == self.board.columns - 1 and up == 0 and down == self.board.rows - 1:
+                    break
 
 
 class Button(pygame.sprite.Sprite):
@@ -529,11 +584,29 @@ def make_start_menu():
     Text("BombPredate", WIDTH / 2, HEIGHT / 5, 70, (102, 222, 78), group=start_menu_sprites)
 
 
+def make_game_ended_menu(text, color):
+    """Создаёт заставку о законченной игре"""
+    game_ended_sprites.empty()
+    make_menu(
+        {
+            "Начать заново": START_GAME,
+            "В главное меню": MAIN_MENU
+        }, game_ended_sprites
+    )
+
+    Text(text, WIDTH / 2, HEIGHT / 5, 70, color, font="YanoneKaffeesatz", group=game_ended_sprites)
+
+
 def main():
     running = True
     clock = pygame.time.Clock()
 
-    background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))
+    background = pygame.transform.scale(load_image("bg.png"), (WIDTH, HEIGHT))  # Небо для фона
+
+    # Затемнение для заставки об окончании игры
+    bg_gameover = pygame.Surface((WIDTH, HEIGHT))
+    bg_gameover.set_alpha(100)
+    pygame.draw.rect(bg_gameover, (0, 0, 0), (0, 0, WIDTH, HEIGHT))
 
     # Создаём облака под фон
     for i in range(10):
@@ -546,7 +619,7 @@ def main():
         {
             "Продолжить игру": CONTINUE_GAME,
             "Начать заново": START_GAME,
-            "Выйти из игры": pygame.QUIT
+            "В главное меню": MAIN_MENU
         }, pause_menu_sprites
     )
 
@@ -560,6 +633,8 @@ def main():
                 start_menu_sprites.update(event)
             elif current_event == PAUSE_MENU:
                 pause_menu_sprites.update(event)
+            elif current_event == GAME_ENDED_MENU:
+                game_ended_sprites.update(event)
 
             if event.type == pygame.QUIT:
                 running = False
@@ -571,36 +646,30 @@ def main():
                 collide_game_sprites.empty()
                 board = Board(45)
 
-                coords = []
+                for i in range(board.rows):
+                    for j in range(board.columns):
+                        if (i, j) not in [(0, 0), (0, 1), (1, 0), (1, 1), (board.rows - 1, board.columns - 1),
+                                          (board.rows - 1, board.columns - 2), (board.rows - 2, board.columns - 1),
+                                          (board.rows - 2, board.columns - 2)]:
+                            Box(board, (i, j))
 
-                for i in range(25):
-                    while True:
-                        coord = (random.randrange(board.rows), random.randrange(board.columns))
-
-                        if coord not in coords:
-                            coords.append(coord)
-                            Box(board, coord)
-                            break
-
-                while True:
-                    coord = (random.randrange(board.rows), random.randrange(board.columns))
-
-                    if coord not in coords:
-                        board.add_player(Player(board, coord))
-                        coords.append(coord)
-                        break
-
-                while True:
-                    coord = (random.randrange(board.rows), random.randrange(board.columns))
-
-                    if coord not in coords:
-                        board.add_player(Enemy(board, coord))
-                        coords.append(coord)
-                        break
+                board.add_player(Player(board, (0, 0)))
+                board.add_player(Enemy(board, (board.rows - 1, board.columns - 1)))
 
             # Если игрок был в меню паузы и решил продолжить игру
             if event.type == CONTINUE_GAME:
                 current_event = GAME
+
+            if current_event != GAME_ENDED_MENU:
+                if event.type == PLAYER_WON:
+                    current_event = GAME_ENDED_MENU
+                    make_game_ended_menu("Выиграл зелёный игрок", (0, 255, 38))
+                elif event.type == ENEMY_WON:
+                    current_event = GAME_ENDED_MENU
+                    make_game_ended_menu("Выиграл красный игрок", (255, 74, 74))
+
+            if event.type == MAIN_MENU:
+                current_event = START_MENU
 
             # Если игрок нажал на кнопку
             if event.type == pygame.KEYDOWN:
@@ -620,16 +689,27 @@ def main():
         cloud_sprites.update()
         cloud_sprites.draw(screen)
 
-        # Если текущие спрайты игровые, то прорисовать доску и спрайты и инициализировать управление
+        # Если текущее состояние это сама игра
         if current_event == GAME:
-            board.render(screen)
+            board.render(screen)  # Прорисуем доску
 
+            # Обновим состояние спрайтов и прорисуем их
             entities_sprites.update()
             items_sprites.update()
             items_sprites.draw(screen)
             entities_sprites.draw(screen)
+        # Если состояние игры это пауза
         elif current_event == PAUSE_MENU:
-            pause_menu_sprites.draw(screen)
+            pause_menu_sprites.draw(screen)  # Прорисуем спрайты меню паузы
+        # Если состояние игры это заставка о конце игры
+        elif current_event == GAME_ENDED_MENU:
+            # Прорисуем доску и спрайты, чтобы на заднем фоне было видно, что произошло
+            board.render(screen)
+            items_sprites.draw(screen)
+            entities_sprites.draw(screen)
+
+            screen.blit(bg_gameover, (0, 0))  # Сделаем картинку темнее, но видимой
+            game_ended_sprites.draw(screen)  # Прорисовываем спрайты заставки
         else:
             start_menu_sprites.draw(screen)
 
