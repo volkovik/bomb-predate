@@ -354,43 +354,58 @@ class Bomb(pygame.sprite.Sprite):
 
         self.board = board
         self.cell_point = cell_point
+
         self.clock = pygame.time.Clock()
         self.timer = 0
+        self.exploding = False
+        self.explosion_up, self.explosion_down, self.explosion_left, self.explosion_right = [None] * 4
 
     def update(self, event=None):
-        self.timer += self.clock.tick()
+        self.timer += self.clock.tick()  # Добавим в таймер сколько прошло с прошлого обновления
 
-        # Если прошло 1.5 секунд
-        if self.timer >= 1500:
-            # Удалить бомбу и начать взрывать предметы на доске по крестовой
-            self.kill()
-            self.board.board[self.cell_point[0]][self.cell_point[1]] = None
+        # Если проходит процесс взрыва бомбы
+        if self.exploding:
+            # Если прошло 0.075 секунды
+            if self.timer >= 75:
+                # Функция, которая удаляет предмет и убивает игрока если они есть на клетке
+                def fun(*coords):
+                    self.board.kill_player_if_exists(*coords)
+                    self.board.delete_item(*coords)
 
-            self.board.kill_player_if_exists(self.cell_point[0], self.cell_point[1])
+                # Проверяем доступность клеток и взрываем их
+                if self.explosion_left > 0:
+                    self.explosion_left -= 1
+                    fun(self.cell_point[0], self.explosion_left)
+                if self.explosion_right < self.board.columns - 1:
+                    self.explosion_right += 1
+                    fun(self.cell_point[0], self.explosion_right)
+                if self.explosion_up > 0:
+                    self.explosion_up -= 1
+                    fun(self.explosion_up, self.cell_point[1])
+                if self.explosion_down < self.board.rows - 1:
+                    self.explosion_down += 1
+                    fun(self.explosion_down, self.cell_point[1])
 
-            left, right = self.cell_point[1], self.cell_point[1]
-            up, down = self.cell_point[0], self.cell_point[0]
+                # Если больше нет клеток для взрыва
+                if self.explosion_left == 0 and self.explosion_right == self.board.columns - 1 \
+                        and self.explosion_up == 0 and self.explosion_down == self.board.rows - 1:
+                    self.board.board[self.cell_point[0]][self.cell_point[1]] = None
+                    self.kill()
 
-            def fun(*coords):
-                self.board.kill_player_if_exists(*coords)
-                self.board.delete_item(*coords)
+                self.timer = 0  # Сбрасываем таймер
+        else:
+            # Если прошло 1.5 секунд и бомба ещё не начала взрываться
+            if self.timer >= 1500:
+                # Убиваем игрока, если он стоит на клетке с бомбой
+                self.board.kill_player_if_exists(self.cell_point[0], self.cell_point[1])
 
-            while True:
-                if left > 0:
-                    left -= 1
-                    fun(self.cell_point[0], left)
-                if right < self.board.columns - 1:
-                    right += 1
-                    fun(self.cell_point[0], right)
-                if up > 0:
-                    up -= 1
-                    fun(up, self.cell_point[1])
-                if down < self.board.rows - 1:
-                    down += 1
-                    fun(down, self.cell_point[1])
+                # Ставим начальные позиции для взрыва остальных клеток
+                self.explosion_up, self.explosion_down = self.cell_point[0], self.cell_point[0]
+                self.explosion_left, self.explosion_right = self.cell_point[1], self.cell_point[1]
 
-                if left == 0 and right == self.board.columns - 1 and up == 0 and down == self.board.rows - 1:
-                    break
+                # Сбросим таймер и поставим статус бомбы как "взрывается"
+                self.exploding = True
+                self.timer = 0
 
 
 class Button(pygame.sprite.Sprite):
