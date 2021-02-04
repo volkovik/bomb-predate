@@ -1,6 +1,7 @@
 import os
 import random
 import sys
+from math import sqrt
 
 import pygame
 
@@ -164,8 +165,32 @@ class Board:
         :param x: строка
         :param y: столбец
         """
+        # Начальные данные
+        cr = (self.cell_size - 10) // 2  # радиус круга (моделька игрока)
+        rx, ry = self.cell_size * y + self.left, self.cell_size * x + self.top  # x, y клетки, где взрывается бомба
+        rh, rw = self.cell_size, self.cell_size  # высота и ширина клетки
+
         for player in self.players:
-            if self.get_cell((player.rect.x + player.rect.w // 2, player.rect.y + player.rect.h // 2)) == (x, y):
+            cx, cy = player.rect.x + cr, player.rect.y + cr  # x, y точки O круга (моделька игрока)
+
+            # Находим ближайшие координаты к кругу в пределах клетки
+            if cx < rx:
+                nearest_x = rx
+            elif cx > rx + rw:
+                nearest_x = rx + rw
+            else:
+                nearest_x = cx
+
+            if cy < ry:
+                nearest_y = ry
+            elif cy > ry + rh:
+                nearest_y = ry + rh
+            else:
+                nearest_y = cy
+
+            # Находим растояние между игроком и клеткой и проверяем, меньше ли полученное растояние радиуса круга игрока
+            # если да, то игрок пересекает клетку и игрок будет убит
+            if sqrt((cx - nearest_x) ** 2 + (cy - nearest_y) ** 2) <= cr:
                 player.kill()
 
     def place_item(self, x, y, item):
