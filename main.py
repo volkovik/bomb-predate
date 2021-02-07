@@ -441,10 +441,10 @@ class Bomb(pygame.sprite.Sprite):
                     if self.board.board[coords[0]][coords[1]] is not None:
                         self.exploded_boxes += 1
 
-                        if self.exploded_boxes >= 2:
+                        if self.exploded_boxes >= 3:
                             self.exploding = False
                     elif self.exploded_boxes != 0:
-                        self.exploded_boxes -= 1
+                        self.exploded_boxes -= 0.75
 
                     self.board.kill_player_if_exists(*coords)
                     self.board.delete_item(*coords)
