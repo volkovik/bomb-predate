@@ -239,6 +239,7 @@ class Entity(pygame.sprite.Sprite):
         super(Entity, self).__init__(entities_sprites, collide_game_sprites)
         width = board.cell_size - 10
 
+        # Основные перменнные
         self.board = board
         self.color = color
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
@@ -247,6 +248,7 @@ class Entity(pygame.sprite.Sprite):
             width, width
         )
 
+        # Рисуем игрока
         pygame.draw.circle(self.image, color, (width // 2, width // 2), width // 2)
         pygame.draw.circle(
             self.image,
@@ -254,13 +256,21 @@ class Entity(pygame.sprite.Sprite):
             (width // 2, width // 2), width // 2, 2
         )
 
+        # Таймер для задержки создание бомб
+        self.bomb_clock = pygame.time.Clock()
+        self.bomb_timer = 300
+
+        self.bomb_adder_clock = pygame.time.Clock()
+        self.bomb_adder_timer = 0
+
+        self.bombs = 3  # Количество бомб у игрока
+
     def move(self, x, y):
         """
         Движение сущности
 
         :param x: количество клеток по x
         :param y: количество клеток по y
-        :return:
         """
         def collided_sprites():
             s = pygame.sprite.spritecollide(self, collide_game_sprites, False, pygame.sprite.collide_mask)
@@ -295,9 +305,21 @@ class Entity(pygame.sprite.Sprite):
         if pressed[self.bomb_key] or mod_pressed & self.bomb_key:
             self.place_bomb()
 
+        self.bomb_adder_timer += self.bomb_adder_clock.tick()
+
+        # Если прошло 4 секунд и бомб у игрока меньше 3-х, то дадим игроку ещё одну бомбу
+        if self.bomb_adder_timer >= 3000 and self.bombs < 3:
+            self.bombs += 1
+            self.bomb_adder_timer = 0
+
     def place_bomb(self):
         """Поставить бомбу на место, где стоит данный игрок"""
-        Bomb(self.board, self.board.get_cell((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2)))
+        self.bomb_timer += self.bomb_clock.tick()  # Прибавляем пройденые тики
+
+        if self.bomb_timer >= 300 and self.bombs > 0:
+            Bomb(self.board, self.board.get_cell((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2)))
+            self.bombs -= 1  # Вычисть количество бомб у игрока
+            self.bomb_timer = 0  # Сбрасываем таймер
 
 
 class Player(Entity):
