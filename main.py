@@ -101,7 +101,7 @@ class Board:
         self.board = [[None] * self.columns for _ in range(self.rows)]
 
         self.left = (WIDTH - 20) % cell_size // 2 + 10
-        self.top = (HEIGHT - 20) % cell_size // 2 + 10
+        self.top = 5
         self.cell_size = cell_size
 
         self.width = cell_size * self.columns
@@ -241,6 +241,7 @@ class Entity(pygame.sprite.Sprite):
 
         # Основные перменнные
         self.board = board
+        self.board.add_player(self)
         self.color = color
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
         self.rect = pygame.Rect(
@@ -638,6 +639,73 @@ class Text(pygame.sprite.Sprite):
         self.image.blit(self.text, (0, 0))
 
 
+class GameInterface:
+    def __init__(self, player, enemy):
+        self.width = 600
+        self.height = 40
+
+        self.player = player
+        self.enemy = enemy
+        self.player_bombs = player.bombs
+        self.enemy_bombs = enemy.bombs
+
+        self.player_color = player.color
+        self.enemy_color = enemy.color
+
+        self.sprites = pygame.sprite.Group()
+        self.player_bombs_text = self.make_text(self.player)
+        self.enemy_bombs_text = self.make_text(self.enemy)
+        self.sprites.add(self.player_bombs_text, self.enemy_bombs_text)
+
+    def draw(self, surface):
+        pygame.draw.rect(
+            surface, self.player_color, 
+            ((WIDTH - self.width) // 2, HEIGHT - self.height, self.width // 2, self.height + 5),
+            border_top_left_radius=7
+        )
+        pygame.draw.rect(
+            surface, (self.player_color[0] * .7, self.player_color[1] * .7, self.player_color[2] * .7),
+            ((WIDTH - self.width) // 2, HEIGHT - self.height, self.width // 2, self.height + 5),  width=2,
+            border_top_left_radius=7
+        )
+        pygame.draw.rect(
+            surface, self.enemy_color,
+            (WIDTH // 2, HEIGHT - self.height, self.width // 2, self.height + 5),
+            border_top_right_radius=7
+        )
+        pygame.draw.rect(
+            surface, (self.enemy_color[0] * .7, self.enemy_color[1] * .7, self.enemy_color[2] * .7),
+            (WIDTH // 2, HEIGHT - self.height, self.width // 2, self.height + 5), width=2,
+            border_top_right_radius=7
+        )
+        self.sprites.draw(surface)
+
+    def update(self):
+        if self.player.bombs != self.player_bombs:
+            self.player_bombs = self.player.bombs
+            self.sprites.remove(self.player_bombs_text)
+            self.player_bombs_text = self.make_text(self.player)
+            self.sprites.add(self.player_bombs_text)
+
+        if self.enemy.bombs != self.enemy_bombs:
+            self.enemy_bombs = self.enemy.bombs
+            self.sprites.remove(self.enemy_bombs_text)
+            self.enemy_bombs_text = self.make_text(self.enemy)
+            self.sprites.add(self.enemy_bombs_text)
+
+    def make_text(self, player):
+        if player == self.player:
+            return Text(
+                f"Бомб: {self.player_bombs} из 3", (WIDTH - self.width // 2) // 2, HEIGHT - 18, 26, (0, 0, 0),
+                font="YanoneKaffeesatz"
+            )
+        else:
+            return Text(
+                f"Бомб: {self.enemy_bombs} из 3", WIDTH // 2 + self.width // 4, HEIGHT - 18, 26, (255, 255, 255),
+                font="YanoneKaffeesatz"
+            )
+
+
 def make_menu(button_names, sprite_group):
     """
     Создаёт кнопки в середине экрана
@@ -736,8 +804,10 @@ def main():
                                           (board.rows - 2, board.columns - 2)]:
                             Box(board, (i, j))
 
-                board.add_player(Player(board, (0, 0)))
-                board.add_player(Enemy(board, (board.rows - 1, board.columns - 1)))
+                player = Player(board, (0, 0))
+                enemy = Enemy(board, (board.rows - 1, board.columns - 1))
+
+                game_interface = GameInterface(player, enemy)
 
             # Если игрок был в меню паузы и решил продолжить игру
             if event.type == CONTINUE_GAME:
@@ -779,6 +849,8 @@ def main():
             # Обновим состояние спрайтов и прорисуем их
             entities_sprites.update()
             items_sprites.update()
+            game_interface.update()
+            game_interface.draw(screen)
             items_sprites.draw(screen)
             entities_sprites.draw(screen)
         # Если состояние игры это пауза
