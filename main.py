@@ -898,6 +898,7 @@ def main():
                 items_sprites.empty()
                 entities_sprites.empty()
                 collide_game_sprites.empty()
+                effects_sprites.empty()
                 board = Board(45)
 
                 for i in range(board.rows):
@@ -953,9 +954,11 @@ def main():
             entities_sprites.update()
             items_sprites.update()
             game_interface.update()
+            effects_sprites.update()
             game_interface.draw(screen)
             items_sprites.draw(screen)
             entities_sprites.draw(screen)
+            effects_sprites.draw(screen)
         # Если состояние игры это пауза
         elif current_event == PAUSE_MENU:
             pause_menu_sprites.draw(screen)  # Прорисуем спрайты меню паузы
@@ -963,17 +966,17 @@ def main():
         elif current_event == GAME_ENDED_MENU:
             # Прорисуем доску и спрайты, чтобы на заднем фоне было видно, что произошло
             board.render(screen)
+            effects_sprites.update()
+            items_sprites.update()
             items_sprites.draw(screen)
             entities_sprites.draw(screen)
+            effects_sprites.draw(screen)
+            game_interface.draw(screen)
 
             screen.blit(bg_gameover, (0, 0))  # Сделаем картинку темнее, но видимой
             game_ended_sprites.draw(screen)  # Прорисовываем спрайты заставки
         else:
             start_menu_sprites.draw(screen)
-
-        # Прорисовываем эффекты
-        effects_sprites.draw(screen)
-        effects_sprites.update()
 
         clock.tick(FPS)
         pygame.display.flip()
