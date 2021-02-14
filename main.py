@@ -32,6 +32,7 @@ GAME_ENDED_MENU = 103
 # Основные спрайты
 entities_sprites = pygame.sprite.Group()  # Спрайты сущностей (игроки)
 items_sprites = pygame.sprite.Group()  # Спрайты препятсвий, предметов и т.д.
+effects_sprites = pygame.sprite.Group()  # Спрайты эффектов
 collide_game_sprites = pygame.sprite.Group()  # Спрайты игры, которые не могут пройти сквозь друг друга
 
 cloud_sprites = pygame.sprite.Group()  # Спрайты облаков
@@ -349,11 +350,56 @@ class Enemy(Entity):
         pygame.event.post(pygame.event.Event(PLAYER_WON))
 
 
+class BoxParticle(pygame.sprite.Sprite):
+    fire = [load_image(f"sawdust{i}.png") for i in range(1, 3)]  # частицы дерева
+
+    def __init__(self, pos, dx, dy):
+        """
+        Спрайт опилки. Используется для эффекта взрыва коробки
+
+        :param pos: координата, где появится опилка
+        :param dx: скорость по x
+        :param dy: скорость по y
+        """
+        super().__init__(effects_sprites)
+        self.scale = 20  # изначальный размер частиц
+
+        self.image = pygame.transform.scale(random.choice(self.fire), (self.scale, self.scale))
+        self.rect = self.image.get_rect()
+
+        self.velocity = [dx, dy]  # скорость полёта опилки
+        self.rect.x, self.rect.y = pos  # координаты, откуда будет падать опилка
+
+        self.distance = 15  # если опилка достигнет 15 пикселей, то она исчезнет
+
+        self.collide_rect = (pos[0] - self.distance, pos[1] - self.distance, self.distance * 2, self.distance * 2)
+
+    def update(self):
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # уменьшаем частицу для эффекта падения
+        self.scale = self.scale - 2 if self.scale > 5 else self.scale
+        self.image = pygame.transform.scale(self.image, (self.scale, self.scale))
+        # убиваем, если частица ушла за экран
+        if not self.rect.colliderect(self.collide_rect):
+            self.kill()
+
+
 class Box(pygame.sprite.Sprite):
     def __init__(self, board, cell_point=(0, 0)):
+        """
+        Спрайт коробки, разрушается бомбой
+
+        :param board: класс доски
+        :param cell_point: клетка, где расположена коробка
+        """
         super(Box, self).__init__(items_sprites, collide_game_sprites)
         width = board.cell_size - 10
         color = pygame.Color(212, 169, 116)
+
+        self.board = board
+        self.cell_point = cell_point
 
         self.image = pygame.Surface((width, width), pygame.SRCALPHA, 32)
         self.rect = pygame.Rect(
@@ -375,6 +421,27 @@ class Box(pygame.sprite.Sprite):
         )
 
         board.place_item(*cell_point, self)
+
+    def kill(self):
+        super(Box, self).kill()
+
+        # Эффект взрыва коробки
+        position = (
+            self.board.left + self.board.cell_size * self.cell_point[1] + self.board.cell_size // 2,
+            self.board.top + self.board.cell_size * self.cell_point[0] + self.board.cell_size // 2
+        )
+
+        static_vel = range(1, 2)
+        dynamic_vel = range(-2, 3)
+
+        for _ in range(2):
+            BoxParticle(position, random.choice(static_vel), random.choice(dynamic_vel))
+        for _ in range(2):
+            BoxParticle(position, -random.choice(static_vel), random.choice(dynamic_vel))
+        for _ in range(2):
+            BoxParticle(position, random.choice(dynamic_vel), random.choice(static_vel))
+        for _ in range(2):
+            BoxParticle(position, random.choice(dynamic_vel), -random.choice(static_vel))
         
         
 class Bomb(pygame.sprite.Sprite):
@@ -867,6 +934,10 @@ def main():
             game_ended_sprites.draw(screen)  # Прорисовываем спрайты заставки
         else:
             start_menu_sprites.draw(screen)
+
+        # Прорисовываем эффекты
+        effects_sprites.draw(screen)
+        effects_sprites.update()
 
         clock.tick(FPS)
         pygame.display.flip()
