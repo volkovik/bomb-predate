@@ -442,6 +442,32 @@ class Box(pygame.sprite.Sprite):
             BoxParticle(position, random.choice(dynamic_vel), random.choice(static_vel))
         for _ in range(2):
             BoxParticle(position, random.choice(dynamic_vel), -random.choice(static_vel))
+
+
+class BombExplosion(pygame.sprite.Sprite):
+    frames = [pygame.transform.scale(load_image(f"explosion{i}.png"), (50, 50)) for i in range(1, 9)]
+    
+    def __init__(self, pos):
+        super(BombExplosion, self).__init__(effects_sprites)
+        self.remaining_frames = iter(self.frames)
+
+        self.image = next(self.remaining_frames)
+        self.rect = self.image.get_rect()
+
+        self.rect.x, self.rect.y = pos[0] - self.rect.w // 2, pos[1] - self.rect.h // 2
+
+        self.clock = pygame.time.Clock()
+        self.timer = 0
+
+    def update(self):
+        try:
+            self.timer += self.clock.tick()
+
+            if self.timer >= 50:
+                self.image = next(self.remaining_frames)
+                self.timer = 0
+        except StopIteration:
+            self.kill()
         
         
 class Bomb(pygame.sprite.Sprite):
@@ -488,6 +514,11 @@ class Bomb(pygame.sprite.Sprite):
     def start_explosion(self):
         # Убиваем игрока, если он стоит на клетке с бомбой
         self.board.kill_player_if_exists(self.cell_point[0], self.cell_point[1])
+        # Эффект взрыва
+        BombExplosion((
+            self.board.left + self.board.cell_size * self.cell_point[1] + self.board.cell_size // 2,
+            self.board.top + self.board.cell_size * self.cell_point[0] + self.board.cell_size // 2
+        ))
 
         # Ставим начальные позиции для взрыва остальных клеток
         self.explosion_up, self.explosion_down = self.cell_point[0], self.cell_point[0]
@@ -513,6 +544,11 @@ class Bomb(pygame.sprite.Sprite):
                             self.exploding = False
                     elif self.exploded_boxes != 0:
                         self.exploded_boxes -= 0.75
+
+                    BombExplosion((
+                        self.board.left + self.board.cell_size * coords[1] + self.board.cell_size // 2,
+                        self.board.top + self.board.cell_size * coords[0] + self.board.cell_size // 2
+                    ))
 
                     self.board.kill_player_if_exists(*coords)
                     self.board.delete_item(*coords)
