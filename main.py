@@ -20,14 +20,16 @@ START_GAME = pygame.USEREVENT + 1
 CONTINUE_GAME = pygame.USEREVENT + 2
 PAUSE = pygame.USEREVENT + 3
 MAIN_MENU = pygame.USEREVENT + 4
-PLAYER_WON = pygame.USEREVENT + 5
-ENEMY_WON = pygame.USEREVENT + 6
+OPEN_TUTORIAL_PAGE = pygame.USEREVENT + 5
+PLAYER_WON = pygame.USEREVENT + 6
+ENEMY_WON = pygame.USEREVENT + 7
 
 # Состояния игры
 START_MENU = 100
 PAUSE_MENU = 101
-GAME = 102
-GAME_ENDED_MENU = 103
+TUTORIAL_PAGE = 102
+GAME = 103
+GAME_ENDED_MENU = 104
 
 # Основные спрайты
 entities_sprites = pygame.sprite.Group()  # Спрайты сущностей (игроки)
@@ -41,6 +43,7 @@ cloud_sprites = pygame.sprite.Group()  # Спрайты облаков
 start_menu_sprites = pygame.sprite.Group()  # Спрайты главного меню
 pause_menu_sprites = pygame.sprite.Group()  # Спрайты меню паузы
 game_ended_sprites = pygame.sprite.Group()  # Спрайты меню окончания игры
+tutorial_sprites = pygame.sprite.Group()  # Спрайты для страницы помощи
 
 
 def load_image(name, colorkey=None):
@@ -830,6 +833,7 @@ def make_start_menu():
     make_menu(
         {
             "Начать игру": START_GAME,
+            "Справка": OPEN_TUTORIAL_PAGE,
             "Выйти из игры": pygame.QUIT
         }, start_menu_sprites
     )
@@ -862,6 +866,9 @@ def main():
     bg_gameover.set_alpha(100)
     pygame.draw.rect(bg_gameover, (0, 0, 0), (0, 0, WIDTH, HEIGHT))
 
+    # Картинка со справкой как играть
+    tutorial_image = load_image("tutorial.png")
+
     # Создаём облака под фон
     for i in range(10):
         Cloud(cloud_sprites)
@@ -871,11 +878,13 @@ def main():
     # Создаём интерфейс меню паузы
     make_menu(
         {
-            "Продолжить игру": CONTINUE_GAME,
+            "Продолжить": CONTINUE_GAME,
             "Начать заново": START_GAME,
             "В главное меню": MAIN_MENU
         }, pause_menu_sprites
     )
+
+    Button("ОК", MAIN_MENU, (WIDTH - 190, HEIGHT - 40), groups=(tutorial_sprites,))
 
     current_event = START_MENU
 
@@ -889,6 +898,8 @@ def main():
                 pause_menu_sprites.update(event)
             elif current_event == GAME_ENDED_MENU:
                 game_ended_sprites.update(event)
+            elif current_event == TUTORIAL_PAGE:
+                tutorial_sprites.update(event)
 
             if event.type == pygame.QUIT:
                 running = False
@@ -927,6 +938,9 @@ def main():
 
             if event.type == MAIN_MENU:
                 current_event = START_MENU
+
+            if event.type == OPEN_TUTORIAL_PAGE:
+                current_event = TUTORIAL_PAGE
 
             # Если игрок нажал на кнопку
             if event.type == pygame.KEYDOWN:
@@ -975,6 +989,9 @@ def main():
 
             screen.blit(bg_gameover, (0, 0))  # Сделаем картинку темнее, но видимой
             game_ended_sprites.draw(screen)  # Прорисовываем спрайты заставки
+        elif current_event == TUTORIAL_PAGE:
+            screen.blit(tutorial_image, (0, 0))
+            tutorial_sprites.draw(screen)
         else:
             start_menu_sprites.draw(screen)
 
