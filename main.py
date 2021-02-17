@@ -219,7 +219,7 @@ class Board:
         :param y: столбец
         """
         if self.board[x][y] is not None:
-            if type(self.board[x][y]) is Bomb:
+            if type(self.board[x][y]) is Bomb and not self.board[x][y].exploding:
                 self.board[x][y].start_explosion()
             else:
                 self.board[x][y].kill()
@@ -552,7 +552,7 @@ class Bomb(pygame.sprite.Sprite):
 
                         if self.exploded_boxes >= 3:
                             self.exploding = False
-                    elif self.exploded_boxes != 0:
+                    elif self.exploded_boxes > 0:
                         self.exploded_boxes -= 0.75
 
                     BombExplosion((
