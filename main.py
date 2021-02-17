@@ -310,12 +310,16 @@ class Entity(pygame.sprite.Sprite):
         if pressed[self.bomb_key] or mod_pressed & self.bomb_key:
             self.place_bomb()
 
-        self.bomb_adder_timer += self.bomb_adder_clock.tick()
+        # Если у игрока меньше трёх бомб, то запустить таймер
+        if self.bombs < 3:
+            self.bomb_adder_timer += self.bomb_adder_clock.tick()
 
-        # Если прошло 4 секунд и бомб у игрока меньше 3-х, то дадим игроку ещё одну бомбу
-        if self.bomb_adder_timer >= 3000 and self.bombs < 3:
-            self.bombs += 1
-            self.bomb_adder_timer = 0
+            # Если прошло 3 секунд и бомб у игрока меньше 3-х, то дадим игроку ещё одну бомбу
+            if self.bomb_adder_timer >= 3000:
+                self.bombs += 1
+                self.bomb_adder_timer = 0
+        else:
+            self.bomb_adder_clock.tick()
 
     def place_bomb(self):
         """Поставить бомбу на место, где стоит данный игрок"""
