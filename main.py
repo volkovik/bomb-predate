@@ -527,6 +527,9 @@ class Bomb(pygame.sprite.Sprite):
             self.board.top + self.board.cell_size * self.cell_point[0] + self.board.cell_size // 2
         ))
 
+        # Скрыть изображение бомбы
+        self.image.set_alpha(0)
+
         # Ставим начальные позиции для взрыва остальных клеток
         self.explosion_up, self.explosion_down = self.cell_point[0], self.cell_point[0]
         self.explosion_left, self.explosion_right = self.cell_point[1], self.cell_point[1]
