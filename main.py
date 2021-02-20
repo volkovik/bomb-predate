@@ -468,6 +468,10 @@ class BombExplosion(pygame.sprite.Sprite):
     frames = [pygame.transform.scale(load_image(f"explosion{i}.png"), (50, 50)) for i in range(1, 9)]
     
     def __init__(self, pos):
+        """
+        Эффект взрыва
+        :param pos: позиция, на которой будет происходить эффект (x, y)
+        """
         super(BombExplosion, self).__init__(effects_sprites)
         self.remaining_frames = iter(self.frames)
 
@@ -767,6 +771,12 @@ class Text(pygame.sprite.Sprite):
 
 class GameInterface:
     def __init__(self, player, enemy):
+        """
+        Интерфейс, показывающий количество бомб у каждого игрока во время игры
+
+        :param player: класс первого игрока
+        :param enemy: класс второго игрока
+        """
         self.width = 600
         self.height = 40
 
@@ -807,6 +817,7 @@ class GameInterface:
         self.sprites.draw(surface)
 
     def update(self):
+        # Проверяем, отображается ли актуальная информация на экране или нет
         if self.player.bombs != self.player_bombs:
             self.player_bombs = self.player.bombs
             self.sprites.remove(self.player_bombs_text)
@@ -820,6 +831,7 @@ class GameInterface:
             self.sprites.add(self.enemy_bombs_text)
 
     def make_text(self, player):
+        """Генерация текста"""
         if player == self.player:
             return Text(
                 f"Бомб: {self.player_bombs} из 3", (WIDTH - self.width // 2) // 2, HEIGHT - 18, 26, (0, 0, 0),
@@ -904,9 +916,10 @@ def main():
         }, pause_menu_sprites
     )
 
+    # Кнопка ОК для страницы справки
     Button("ОК", MAIN_MENU, (WIDTH - 190, HEIGHT - 40), groups=(tutorial_sprites,))
 
-    current_event = START_MENU
+    current_event = START_MENU  # Текущее состояние игры
 
     # Основной цикл игры
     while running:
@@ -932,6 +945,7 @@ def main():
                 effects_sprites.empty()
                 board = Board(45)
 
+                # Генерация коробок
                 for i in range(board.rows):
                     for j in range(board.columns):
                         if (i, j) not in [(0, 0), (0, 1), (1, 0), (1, 1), (board.rows - 1, board.columns - 1),
@@ -939,6 +953,7 @@ def main():
                                           (board.rows - 2, board.columns - 2)]:
                             Box(board, (i, j))
 
+                # Инициализация игроков
                 player = Player(board, (0, 0))
                 enemy = Enemy(board, (board.rows - 1, board.columns - 1))
 
@@ -1009,9 +1024,11 @@ def main():
 
             screen.blit(bg_gameover, (0, 0))  # Сделаем картинку темнее, но видимой
             game_ended_sprites.draw(screen)  # Прорисовываем спрайты заставки
+        # Если состояние игры это страница справки
         elif current_event == TUTORIAL_PAGE:
             screen.blit(tutorial_image, (0, 0))
             tutorial_sprites.draw(screen)
+        # В остальных случаях, состояние игры будет распознаваться как главное меню
         else:
             start_menu_sprites.draw(screen)
 
