@@ -45,6 +45,10 @@ pause_menu_sprites = pygame.sprite.Group()  # Спрайты меню паузы
 game_ended_sprites = pygame.sprite.Group()  # Спрайты меню окончания игры
 tutorial_sprites = pygame.sprite.Group()  # Спрайты для страницы помощи
 
+# Виды клавиш на клавиатуре
+KEY = 1
+MOD = 2
+
 
 def load_image(name, colorkey=None):
     """
@@ -227,11 +231,11 @@ class Board:
 
 
 class Entity(pygame.sprite.Sprite):
-    up_key = pygame.K_w
-    down_key = pygame.K_s
-    right_key = pygame.K_d
-    left_key = pygame.K_a
-    bomb_key = pygame.K_e
+    up_key = (pygame.K_w, KEY)
+    down_key = (pygame.K_s, KEY)
+    right_key = (pygame.K_d, KEY)
+    left_key = (pygame.K_a, KEY)
+    bomb_key = (pygame.K_e, KEY)
 
     def __init__(self, board, cell_point=(0, 0), color=pygame.Color(255, 255, 255)):
         """
@@ -299,15 +303,24 @@ class Entity(pygame.sprite.Sprite):
         pressed = pygame.key.get_pressed()
         mod_pressed = pygame.key.get_mods()
 
-        if pressed[self.up_key]:
+        # Функция проверяющая нажата ли клавиша
+        def is_pressed(k, ktype):
+            if ktype == KEY:
+                return pressed[k]
+            elif ktype == MOD:
+                return mod_pressed & k
+            else:
+                return False
+
+        if is_pressed(*self.up_key):
             self.move(0, -PLAYER_VELOCITY)
-        if pressed[self.down_key]:
+        if is_pressed(*self.down_key):
             self.move(0, PLAYER_VELOCITY)
-        if pressed[self.left_key]:
+        if is_pressed(*self.left_key):
             self.move(-PLAYER_VELOCITY, 0)
-        if pressed[self.right_key]:
+        if is_pressed(*self.right_key):
             self.move(PLAYER_VELOCITY, 0)
-        if pressed[self.bomb_key] or mod_pressed & self.bomb_key:
+        if is_pressed(*self.bomb_key):
             self.place_bomb()
 
         # Если у игрока меньше трёх бомб, то запустить таймер
@@ -342,11 +355,11 @@ class Player(Entity):
 
 
 class Enemy(Entity):
-    up_key = pygame.K_UP
-    down_key = pygame.K_DOWN
-    right_key = pygame.K_RIGHT
-    left_key = pygame.K_LEFT
-    bomb_key = pygame.KMOD_CTRL
+    up_key = (pygame.K_UP, KEY)
+    down_key = (pygame.K_DOWN, KEY)
+    right_key = (pygame.K_RIGHT, KEY)
+    left_key = (pygame.K_LEFT, KEY)
+    bomb_key = (pygame.KMOD_RCTRL, MOD)
 
     def __init__(self, board, cell_point):
         """Сущность противника-бота"""
