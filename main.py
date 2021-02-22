@@ -33,7 +33,7 @@ GAME_ENDED_MENU = 104
 
 # Основные спрайты
 entities_sprites = pygame.sprite.Group()  # Спрайты сущностей (игроки)
-items_sprites = pygame.sprite.Group()  # Спрайты препятсвий, предметов и т.д.
+items_sprites = pygame.sprite.Group()  # Спрайты препятствий, предметов и т.д.
 effects_sprites = pygame.sprite.Group()  # Спрайты эффектов
 collide_game_sprites = pygame.sprite.Group()  # Спрайты игры, которые не могут пройти сквозь друг друга
 
@@ -196,9 +196,9 @@ class Board:
             else:
                 nearest_y = cy
 
-            # Находим растояние между игроком и клеткой и проверяем, меньше ли полученное растояние радиуса круга игрока
-            # если да, то игрок пересекает клетку и игрок будет убит. Специально добавлена погрешность, чтобы игроки не
-            # взрывались, если они пересекли пару пикселей
+            # Находим расстояние между игроком и клеткой и проверяем, меньше ли полученное расcтояние радиуса круга
+            # игрока если да, то игрок пересекает клетку и игрок будет убит. Специально добавлена погрешность, чтобы
+            # игроки не взрывались, если они пересекли пару пикселей
             if sqrt((cx - nearest_x) ** 2 + (cy - nearest_y) ** 2) + 3 <= cr:
                 player.kill()
 
@@ -247,7 +247,7 @@ class Entity(pygame.sprite.Sprite):
         super(Entity, self).__init__(entities_sprites, collide_game_sprites)
         width = board.cell_size - 10
 
-        # Основные перменнные
+        # Основные переменные
         self.board = board
         self.board.add_player(self)
         self.color = color
@@ -336,7 +336,7 @@ class Entity(pygame.sprite.Sprite):
 
     def place_bomb(self):
         """Поставить бомбу на место, где стоит данный игрок"""
-        self.bomb_timer += self.bomb_clock.tick()  # Прибавляем пройденые тики
+        self.bomb_timer += self.bomb_clock.tick()  # Прибавляем пройденные тики
 
         if self.bomb_timer >= 300 and self.bombs > 0:
             Bomb(self.board, self.board.get_cell((self.rect.x + self.rect.w // 2, self.rect.y + self.rect.h // 2)))
@@ -497,7 +497,7 @@ class BombExplosion(pygame.sprite.Sprite):
 class Bomb(pygame.sprite.Sprite):
     def __init__(self, board, cell_point=(0, 0)):
         """
-        Спрайт бомбы. После спайвна на доске нужно 1.5 секунд, чтобы взорваться
+        Спрайт бомбы. После спавна на доске нужно 1.5 секунд, чтобы взорваться
 
         :param board: доска
         :param cell_point: координата на доске, где должна стоять бомба
@@ -602,8 +602,8 @@ class Bomb(pygame.sprite.Sprite):
 
                 self.timer = 0  # Сбрасываем таймер
         else:
-            # Если прошло 1.5 секунд и бомба ещё не начала взрываться
-            if self.timer >= 1500:
+            # Если прошло 2 секунды и бомба ещё не начала взрываться
+            if self.timer >= 2000:
                 self.start_explosion()
 
 
